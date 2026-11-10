@@ -93,12 +93,17 @@ const IDENTITY: [u8; 12 + VERSION.len() + 1] = {
 };
 
 /// Layout from ps5-payload-sdk samples/hello_world: message at offset 45.
+/// Only the debug build's metrics endpoint notifies; the release build sends
+/// no system notification at launch, so this and `notify` are built only
+/// with `mem_report`.
+#[cfg(feature = "mem_report")]
 #[repr(C)]
 struct NotifyRequest {
     head: [u8; 45],
     message: [u8; 3075],
 }
 
+#[cfg(feature = "mem_report")]
 extern "C" {
     fn sceKernelSendNotificationRequest(
         device: c_int,
@@ -109,6 +114,7 @@ extern "C" {
 }
 
 /// Best effort system notification; errors are ignored.
+#[cfg(feature = "mem_report")]
 unsafe fn notify(text: &[u8]) {
     let mut req = NotifyRequest {
         head: [0; 45],
@@ -132,50 +138,12 @@ pub(crate) const BUILD_REV: &str = match option_env!("AMPR_GIT_REV") {
 #[cfg(feature = "mem_report")]
 const BUILD_FLAVOR: &str = "debug";
 
-/// "ampr-emu-ng: v0.3.4 (<mode>) running" into `out`; its length. Mode:
-/// "zstd" (ampr_zstd.index), "lz4" (ampr_assets.index) or "plain" (no
-/// packs, loose files only).
-fn load_notice(mode: &[u8], out: &mut [u8; 64]) -> usize {
-    let mut n = 0;
-    for part in [
-        b"ampr-emu-ng: v" as &[u8],
-        VERSION.as_bytes(),
-        b" (",
-        mode,
-        b") running",
-    ] {
-        out[n..n + part.len()].copy_from_slice(part);
-        n += part.len();
-    }
-    n
-}
-
-/// Tells the owner the module runs; also keeps AMPR_EMU_VERSION linked.
-unsafe fn notify_loaded() {
-    let _ = unsafe { core::ptr::read_volatile(&raw const AMPR_EMU_VERSION) };
-    let mut text = [0u8; 64];
-    let mode: &[u8] = if super::pack::zstd_mode() {
-        b"zstd"
-    } else if super::pack::packs_present() {
-        b"lz4"
-    } else {
-        b"plain"
-    };
-    let n = load_notice(mode, &mut text);
-    unsafe { notify(&text[..n]) };
-}
-
 #[cfg(test)]
-mod notice_tests {
+mod identity_tests {
     #[test]
-    fn notice_names_version_and_format() {
-        let mut out = [0u8; 64];
-        let n = super::load_notice(b"zstd", &mut out);
-        assert_eq!(&out[..n], b"ampr-emu-ng: v0.3.4 (zstd) running");
-        let n = super::load_notice(b"lz4", &mut out);
-        assert_eq!(&out[..n], b"ampr-emu-ng: v0.3.4 (lz4) running");
-        let n = super::load_notice(b"plain", &mut out);
-        assert_eq!(&out[..n], b"ampr-emu-ng: v0.3.4 (plain) running");
+    fn identity_names_project_and_version() {
+        // The launch notification that used to spell this out is gone; the
+        // identity string itself is what the pack tools read.
         assert_eq!(&super::IDENTITY, b"ampr-emu-ng 0.3.4\0");
     }
 }
@@ -1410,11 +1378,10 @@ pub unsafe extern "C" fn module_start(_args: usize, _argp: *const c_void) -> c_i
     // and the pack state, so titles with no packs read them too (thread
     // budget, pool size, equeue_local).
     unsafe { super::tune::load() };
-    // Before any hook: the mode picks the hooks and the notification text.
+    // Before any hook: the mode picks the hooks.
     unsafe { super::pack::select_pack_format() };
     #[cfg(feature = "mem_report")]
     unsafe { super::blackbox::open() };
-    unsafe { notify_loaded() };
     let rc = unsafe { hook::amprInstallLibkernelHooks() };
     // Packed files have no physical copy (ampr_zstd-NNN.pak or the AMPRPAK4
     // volumes), and the game opens some with plain open() before any AMPR

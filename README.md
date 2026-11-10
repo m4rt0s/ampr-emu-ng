@@ -35,12 +35,11 @@ until the level is loaded, read from the debug build's `/metrics`.
 ### Use
 
 Copy `libSceAmpr.sprx` into the game's `fakelib/`, mount the game with
-ShadowMountPlus and turn off fakelib updates in its settings. At launch the
-console shows `ampr-emu-ng: vx.x.x (zstd) running`. The mode in that line is
-`zstd` for zstd packs, `lz4` for LZ4 packs, or `plain` when the game has no
-packs and only loose files. A plain game gets the v0.2.0 hook set: the
-virtual-fd, libc and mmap hooks install only when the game ships
-packs.
+ShadowMountPlus and turn off fakelib updates in its settings. The runtime
+picks the pack mode from the game files: `zstd` for zstd packs, `lz4` for
+LZ4 packs, or `plain` when the game has no packs and only loose files. A
+plain game gets the v0.2.0 hook set: the virtual-fd, libc and mmap hooks
+install only when the game ships packs.
 
 ### Make packs
 
