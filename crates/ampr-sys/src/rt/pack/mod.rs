@@ -176,7 +176,10 @@ impl PackFormat {
         }
     }
 
-    /// Name in the load notice, `/metrics` and the black box.
+    /// Name of the mode in `/metrics` and in the pack format tests; the
+    /// release build shows neither, so it is built only with `mem_report`
+    /// or tests.
+    #[cfg(any(test, feature = "mem_report"))]
     pub(crate) const fn label(self) -> &'static [u8] {
         match self {
             Self::Plain => b"plain",
