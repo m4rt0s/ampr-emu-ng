@@ -137,39 +137,6 @@ pub(crate) const BUILD_REV: &str = match option_env!("AMPR_GIT_REV") {
 #[cfg(feature = "mem_report")]
 const BUILD_FLAVOR: &str = "debug";
 
-/// "ampr-emu-ng: v<version> (<mode>) running" into `out`; its length. Mode:
-/// "zstd" (ampr_zstd.index), "lz4" (ampr_assets.index) or "plain" (no
-/// packs, loose files only).
-fn load_notice(mode: &[u8], out: &mut [u8; 64]) -> usize {
-    let mut n = 0;
-    for part in [
-        b"ampr-emu-ng: v" as &[u8],
-        VERSION.as_bytes(),
-        b" (",
-        mode,
-        b") running",
-    ] {
-        out[n..n + part.len()].copy_from_slice(part);
-        n += part.len();
-    }
-    n
-}
-
-/// Tells the owner the module runs; also keeps AMPR_EMU_VERSION linked.
-unsafe fn notify_loaded() {
-    let _ = unsafe { core::ptr::read_volatile(&raw const AMPR_EMU_VERSION) };
-    let mut text = [0u8; 64];
-    let mode: &[u8] = if super::pack::zstd_mode() {
-        b"zstd"
-    } else if super::pack::packs_present() {
-        b"lz4"
-    } else {
-        b"plain"
-    };
-    let n = load_notice(mode, &mut text);
-    unsafe { notify(&text[..n]) };
-}
-
 // ---- /bench query parsing and region planning ---------------------------
 
 /// Pure parts of the debug build's `GET /bench?path=/app0/...`, kept apart
@@ -1427,11 +1394,10 @@ pub unsafe extern "C" fn module_start(_args: usize, _argp: *const c_void) -> c_i
     // and the pack state, so titles with no packs read them too (thread
     // budget, pool size, equeue_local).
     unsafe { super::tune::load() };
-    // Before any hook: the mode picks the hooks and the notification text.
+    // Before any hook: the mode picks the hooks.
     unsafe { super::pack::select_pack_format() };
     #[cfg(feature = "mem_report")]
     unsafe { super::blackbox::open() };
-    unsafe { notify_loaded() };
     let rc = unsafe { hook::amprInstallLibkernelHooks() };
     // Packed files have no physical copy (ampr_zstd-NNN.pak or the AMPRPAK4
     // volumes), and the game opens some with plain open() before any AMPR
