@@ -86,3 +86,5 @@ jobs:
             --draft \
             --generate-notes \
             libSceAmpr.sprx libSceAmpr-debug.sprx SHA256SUMS
+
+# ci: arm workflows on this fork
