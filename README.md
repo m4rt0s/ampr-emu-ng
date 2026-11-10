@@ -9,9 +9,9 @@ It only reads packs; to make them see [Make packs](#make-packs).
 ### Use
 
 Copy `libSceAmpr.sprx` into the game's `fakelib/`, mount the game with
-ShadowMountPlus and turn off fakelib updates in its settings. At launch the
-console shows `ampr-emu-ng: vx.x.x (zstd) running`, where the mode is `zstd`,
-`pkg`, `lz4`, or `plain` for a game with only loose files. The virtual-fd, libc,
+ShadowMountPlus and turn off fakelib updates in its settings. The runtime
+picks the pack mode from the game files: `zstd`, `pkg`, `lz4`, or `plain`
+for a game with only loose files. The virtual-fd, libc,
 mmap and game AIO hooks install only in a game with packs; the thread
 creation and save data hooks install in every game.
 
